@@ -1,0 +1,159 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - displayName: string (optional)
+    //   - photoURL: string (optional)
+    //   - xp: number (required)
+    //   - level: number (required)
+    //   - stats: map (required)
+    //   - learningPersonality: string (optional)
+    //   - createdAt: number (required)
+    //
+    // Collection: contents
+    // Document ID: {contentId}
+    // Fields:
+    //   - id: string (required)
+    //   - userId: string (required)
+    //   - title: string (required)
+    //   - rawText: string (required)
+    //   - concepts: list (required)
+    //   - createdAt: number (required)
+    //
+    // Collection: performance
+    // Document ID: {perfId}
+    // Fields:
+    //   - userId: string (required)
+    //   - topicId: string (required)
+    //   - difficulty: string (required)
+    //   - accuracy: number (required)
+    //   - attempts: number (required)
+    //   - weakScore: number (required)
+    //   - lastReviewed: number (required)
+    //   - nextReviewDate: number (required)
+    //
+    // Collection: quizAttempts
+    // Document ID: {attemptId}
+    // Fields:
+    //   - id: string (required)
+    //   - userId: string (required)
+    //   - contentId: string (required)
+    //   - questions: list (required)
+    //   - score: number (required)
+    //   - timestamp: number (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'xp', 'level', 'stats', 'learningPersonality', 'createdAt']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.xp is number && data.xp >= 0 &&
+             data.level is number && data.level >= 1 &&
+             data.stats is map &&
+             data.createdAt is number;
+    }
+
+    function isValidContent(data) {
+      return hasOnlyAllowedFields(['id', 'userId', 'title', 'rawText', 'concepts', 'deleted', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.rawText is string && data.rawText.size() < 1000000 &&
+             data.concepts is list &&
+             data.createdAt is number &&
+             data.deleted is bool;
+    }
+
+    function isValidPerformance(data) {
+      return hasOnlyAllowedFields(['userId', 'topicId', 'difficulty', 'accuracy', 'attempts', 'weakScore', 'lastReviewed', 'nextReviewDate']) &&
+             data.userId == request.auth.uid &&
+             data.topicId is string &&
+             data.difficulty in ['easy', 'medium', 'hard'] &&
+             data.accuracy is number &&
+             data.attempts is number &&
+             data.weakScore is number &&
+             data.lastReviewed is number &&
+             data.nextReviewDate is number;
+    }
+
+    function isValidQuizAttempt(data) {
+      return hasOnlyAllowedFields(['id', 'userId', 'contentId', 'questions', 'score', 'timestamp']) &&
+             data.userId == request.auth.uid &&
+             data.contentId is string &&
+             data.questions is list &&
+             data.score is number &&
+             data.timestamp is number;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow get: if isAuthenticated();
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+    }
+
+    match /contents/{contentId} {
+      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && isValidContent(request.resource.data);
+      allow update: if isDocOwner() && isValidContent(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+
+    match /performance/{perfId} {
+      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && isValidPerformance(request.resource.data);
+      allow update: if isDocOwner() && isValidPerformance(request.resource.data);
+    }
+
+    match /quizAttempts/{attemptId} {
+      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() && isValidQuizAttempt(request.resource.data);
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

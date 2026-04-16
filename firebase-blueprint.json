@@ -1,0 +1,111 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user statistics and learning progress.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "xp": { "type": "number" },
+        "level": { "type": "number" },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "totalQuizzes": { "type": "number" },
+            "correctAnswers": { "type": "number" },
+            "timeSpent": { "type": "number" }
+          }
+        },
+        "learningPersonality": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["uid", "email", "xp", "level", "stats", "createdAt"]
+    },
+    "Content": {
+      "title": "Learning Content",
+      "description": "Structured content extracted from user uploads.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "rawText": { "type": "string" },
+        "concepts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "description": { "type": "string" },
+              "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] }
+            }
+          }
+        },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "title", "rawText", "concepts", "createdAt"]
+    },
+    "Performance": {
+      "title": "Topic Performance",
+      "description": "Tracks user performance on specific topics for adaptive learning.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "topicId": { "type": "string" },
+        "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] },
+        "accuracy": { "type": "number" },
+        "attempts": { "type": "number" },
+        "weakScore": { "type": "number" },
+        "lastReviewed": { "type": "number" },
+        "nextReviewDate": { "type": "number" }
+      },
+      "required": ["userId", "topicId", "difficulty", "accuracy", "attempts", "weakScore", "lastReviewed", "nextReviewDate"]
+    },
+    "QuizAttempt": {
+      "title": "Quiz Attempt",
+      "description": "History of quiz sessions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "contentId": { "type": "string" },
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "questionId": { "type": "string" },
+              "correct": { "type": "boolean" },
+              "timeTaken": { "type": "number" }
+            }
+          }
+        },
+        "score": { "type": "number" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["id", "userId", "contentId", "questions", "score", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document."
+    },
+    "/contents/{contentId}": {
+      "schema": "Content",
+      "description": "Learning content documents."
+    },
+    "/performance/{perfId}": {
+      "schema": "Performance",
+      "description": "Performance tracking documents."
+    },
+    "/quizAttempts/{attemptId}": {
+      "schema": "QuizAttempt",
+      "description": "Quiz attempt history."
+    }
+  }
+}

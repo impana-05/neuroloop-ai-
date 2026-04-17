@@ -9,7 +9,7 @@ import { useAuth } from "../lib/AuthContext";
 import { cn } from "@/src/lib/utils";
 import { collection, query, where, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../lib/firebase";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { aiService } from "../lib/ai";
 import { Send } from "lucide-react";
 
@@ -30,6 +30,9 @@ export default function Dashboard() {
   const [aiQuestion, setAiQuestion] = useState("");
   const [aiResponse, setAiResponse] = useState("");
   const [isAsking, setIsAsking] = useState(false);
+  const [weakPoints, setWeakPoints] = useState<any[]>([]);
+
+  const navigate = useNavigate();
 
   const handleAskGemini = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +65,18 @@ export default function Dashboard() {
           ...doc.data()
         }));
         setContents(fetchedContents);
+
+        // Fetch weak points
+        const perfQ = query(collection(db, "performance"), where("userId", "==", user.uid));
+        const perfSnapshot = await getDocs(perfQ);
+        const performanceData = perfSnapshot.docs.map(doc => doc.data());
+        
+        // Sort by weakScore descending and take top 3
+        const sortedWeak = performanceData
+          .sort((a: any, b: any) => (b.weakScore || 0) - (a.weakScore || 0))
+          .slice(0, 3);
+        
+        setWeakPoints(sortedWeak);
       } catch (err) {
         handleFirestoreError(err, OperationType.LIST, "contents");
       } finally {
@@ -197,27 +212,32 @@ export default function Dashboard() {
             <p className="text-xs text-text-muted">Retention peak predicted at 16:30</p>
           </div>
 
-          <div className="glass-panel p-6 bg-linear-to-br from-accent/5 to-transparent">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4">Spaced Repetition</h2>
-            <p className="text-xl font-medium mb-1">12 Concepts Due</p>
-            <p className="text-xs text-text-muted">Priority: Advanced Concurrency Patterns, JWT Security</p>
+          <div className="glass-panel p-6 bg-linear-to-br from-accent/5 to-transparent relative overflow-hidden group">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4">Neural Recovery</h2>
+            <p className="text-xl font-medium mb-1">Concentrated Review</p>
+            <p className="text-xs text-text-muted mb-4">Targeting {weakPoints.length} core vulnerabilities</p>
+            <button 
+              onClick={() => navigate("/revision")}
+              className="w-full py-3 bg-accent text-white rounded-xl font-bold text-sm shadow-lg shadow-accent/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            >
+              <Zap className="w-4 h-4" />
+              Start Smart Revision
+            </button>
           </div>
 
           <div className="glass-panel p-6">
             <h2 className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4">Neural Weak Points</h2>
             <ul className="space-y-3">
-              <li className="flex items-center gap-2 text-sm text-red-400">
-                <div className="w-1.5 h-1.5 bg-red-400 rounded-full" />
-                Garbage Collection Tuning
-              </li>
-              <li className="flex items-center gap-2 text-sm text-red-400">
-                <div className="w-1.5 h-1.5 bg-red-400 rounded-full" />
-                B-Tree Indexing
-              </li>
-              <li className="flex items-center gap-2 text-sm text-red-400">
-                <div className="w-1.5 h-1.5 bg-red-400 rounded-full" />
-                OAuth2 Flow
-              </li>
+              {weakPoints.length > 0 ? (
+                weakPoints.map((point, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-red-400">
+                    <div className="w-1.5 h-1.5 bg-red-400 rounded-full shadow-[0_0_8px_rgba(248,113,113,0.5)]" />
+                    {point.topicId}
+                  </li>
+                ))
+              ) : (
+                <li className="text-xs text-text-muted italic">No critical weak points identified yet.</li>
+              )}
             </ul>
           </div>
         </div>

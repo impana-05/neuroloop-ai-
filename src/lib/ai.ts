@@ -118,5 +118,42 @@ export const aiService = {
       }
     });
     return response?.text || "I'm sorry, I couldn't generate a response at this time.";
+  },
+
+  async generateRevisionQuestions(weakTopics: any[]) {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `Generate 7 multiple-choice questions focusing on the user's weak areas. 
+      
+      Style Guidelines:
+      - Tone: Encouraging, supportive, and focused on improvement.
+      - Difficulty: Easy and Medium only. Avoid hard questions to build confidence.
+      - Hint: Provide a very helpful hint for each question.
+      - Explanation: Provide a clear, simple explanation after the answer.
+      - Session Type: Smart Revision Mode.
+      
+      Weak Topics (Title and Description): ${JSON.stringify(weakTopics)}`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              conceptId: { type: Type.STRING },
+              text: { type: Type.STRING },
+              options: { type: Type.ARRAY, items: { type: Type.STRING } },
+              correctAnswer: { type: Type.STRING },
+              explanation: { type: Type.STRING },
+              hint: { type: Type.STRING },
+              difficulty: { type: Type.STRING }
+            },
+            required: ["conceptId", "text", "options", "correctAnswer", "explanation", "hint", "difficulty"]
+          }
+        }
+      }
+    });
+    if (!response?.text) throw new Error("No response from AI");
+    return JSON.parse(response.text);
   }
 };

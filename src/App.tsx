@@ -3,6 +3,7 @@ import React, { lazy, Suspense, memo } from "react";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Library from "./pages/Library";
+import Revision from "./pages/Revision";
 import Upload from "./pages/Upload";
 import Quiz from "./pages/Quiz";
 import Analytics from "./pages/Analytics";
@@ -59,6 +60,19 @@ function AppRoutes() {
             user ? (
               <Layout>
                 <Dashboard />
+              </Layout>
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+        
+        <Route
+          path="/revision"
+          element={
+            user ? (
+              <Layout>
+                <Revision />
               </Layout>
             ) : (
               <Navigate to="/" />

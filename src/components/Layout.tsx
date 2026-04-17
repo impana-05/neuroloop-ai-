@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Brain, LayoutDashboard, Upload, BookOpen, BarChart2, LogOut } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { useAuth } from "../lib/AuthContext";
+import AIAssistant from "./AIAssistant";
 
 interface LayoutProps {
   children: ReactNode;
@@ -73,6 +74,7 @@ export default function Layout({ children }: LayoutProps) {
         <div className="max-w-6xl mx-auto">
           {children}
         </div>
+        <AIAssistant />
       </main>
     </div>
   );
